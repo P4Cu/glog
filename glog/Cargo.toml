@@ -1,0 +1,27 @@
+[package]
+name = "glog"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+scrollview = { path = "../scrollview" }
+vim_key = { path = "../vim_key" }
+git = { path = "../git" }
+clap = { version = "4", features = ["derive",] }
+log = { version = "0.4", features = ["release_max_level_warn", "max_level_trace"] }
+crossterm = { version = "0.25", features = ["event-stream"] }
+futures = "0.3"
+# TODO: this is now ratatui https://github.com/ratatui-org/ratatui/blob/main/BREAKING-CHANGES.md
+tui = { version = "0.19", features = ["crossterm"], default-features = false }
+tui-textarea = { version = "0.2", features = ["crossterm"] }
+tokio = { version = "1", features = ["full"] }
+tokio-stream = "0.1"
+async-stream = "0.3"
+copypasta = "0.10"
+syslog = "6"
+log-panics = { version = "2", features = ["with-backtrace"] }
+stopwatch = "0.0.7"
+skim = "0.10"
+shlex = "1"

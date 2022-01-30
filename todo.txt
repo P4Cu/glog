@@ -1,0 +1,6 @@
+:cmdline-mode (like vim)
+Commands should actually trigger line editor so you do a 'dd<enter>' as example
+
+:keyboard actions should list next available press
+
+:help

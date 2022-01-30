@@ -1,0 +1,91 @@
+use std::io;
+
+use crossterm::{
+    execute,
+    terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
+};
+use log::{error, warn};
+use tui::{backend::CrosstermBackend, Terminal};
+
+pub struct Term {
+    pub terminal: Terminal<CrosstermBackend<io::Stdout>>,
+}
+
+impl Term {
+    pub fn new() -> Result<Self, io::Error> {
+        let stdout = io::stdout();
+        let backend = CrosstermBackend::new(stdout);
+        let terminal = Terminal::new(backend)?;
+        let mut term = Term { terminal };
+        term.enter()?;
+        Ok(term)
+    }
+
+    pub fn call<F>(&mut self, func: F) -> Result<(), io::Error>
+    where
+        F: FnOnce(),
+    {
+        self.restore()?;
+        func();
+        self.enter()
+    }
+
+    pub fn call_external(&mut self, mut command: std::process::Command) -> Result<(), io::Error> {
+        self.call(|| {
+            let result = command.status();
+            match result {
+                Ok(exit_code) => {
+                    if !exit_code.success() {
+                        warn!(
+                            "Command {:#?} finished with exit_code {}",
+                            command, exit_code
+                        )
+                    }
+                }
+                Err(err) => warn!("Command {:#?} finished with error: {}", command, err),
+            };
+        })
+    }
+
+    pub fn clear(&mut self) {
+        if let Err(err) = self.terminal.clear() {
+            error!("Error from terminal clear: {}", err);
+        }
+    }
+
+    fn enter(&mut self) -> Result<(), io::Error> {
+        enable_raw_mode()?;
+        execute!(
+            io::stdout(),
+            EnterAlternateScreen,
+            // EnableMouseCapture
+        )
+    }
+
+    fn restore(&mut self) -> Result<(), io::Error> {
+        // restore terminal
+        disable_raw_mode()?;
+        execute!(
+            io::stdout(),
+            LeaveAlternateScreen,
+            // DisableMouseCapture
+        )?;
+        self.terminal.show_cursor()?;
+        Ok(())
+    }
+
+    #[allow(dead_code)]
+    pub fn write_main_screen(&mut self, text: &str) -> Result<(), io::Error> {
+        self.restore()?;
+        println!("{}", text);
+        self.enter()
+    }
+}
+
+impl Drop for Term {
+    fn drop(&mut self) {
+        if let Err(err) = self.restore() {
+            error!("Error during restoring terminal: {}", err);
+        }
+    }
+}

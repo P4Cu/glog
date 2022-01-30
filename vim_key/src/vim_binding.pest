@@ -1,0 +1,22 @@
+// tester: https://pest.rs/#editor
+
+main = {
+	SOI
+    ~ (group|key)+
+    ~ silent_EOI
+}
+
+digit = {'0'..'9'}
+space = { "space" }
+
+group = { "<" ~ (fx_key | mod_key | space) ~ ">" }
+key = {!"<" ~ ANY}
+
+fx_key = ${ "f" ~ digit+ }
+
+mod_ctrl = { "c-" | "C-" }
+mod_alt = { "a-" | "A-" }
+mod_key = ${ (mod_ctrl|mod_alt) ~ key }
+
+// EOI is not silent which breaks match arms
+silent_EOI = _{!ANY}
