@@ -1,3 +1,5 @@
+use std::io::Write;
+
 use copypasta::{x11_clipboard::X11ClipboardContext, ClipboardProvider};
 use log::debug;
 use skim::prelude::*;
@@ -24,13 +26,14 @@ pub struct Context<'a> {
     pub input: Input,
     pub clipboard: Option<X11ClipboardContext>,
     pub term: Term,
-    pub parser: VimKeyParser<&'a str>,
+    pub parser: VimKeyParser<String>,
 }
 
 // TODO: help action, most probably we should have struct Actions{}
 
 pub fn actions<'a>() -> Vec<(&'static str, FnCommand<Context<'a>>)> {
     vec![
+        ("map", map_action),
         ("echo", echo),
         ("quit", quit),
         ("up", up),
@@ -72,13 +75,57 @@ impl Context<'_> {
         self.term
             .call_external(command)
             .expect("Something went wrong");
-        self.term.clear();
         Result::Ok(())
     }
 }
 
 pub fn echo(ctx: &mut Context, args: &[&str]) -> CommandResult {
     ctx.app.status = args.join(" ").to_owned();
+    Ok(())
+}
+
+pub fn map_action(ctx: &mut Context, args: &[&str]) -> CommandResult {
+    let mut x = |mut actions: Vec<(String, &String)>| {
+        actions.sort_by(|(k, _), (k2, _)| k.to_lowercase().cmp(&k2.to_lowercase())); // TODO: sorting of 'g' and 'G' is unstable but that's a minor
+        let text = actions
+            .into_iter()
+            .map(|(keybind, action)| format!("{:10} {}", keybind, action))
+            .collect::<Vec<_>>()
+            .join("\n");
+        ctx.term
+            .call(|| {
+                let mut command = std::process::Command::new("less") // TODO: user PAGER or 'less'
+                    .stdin(std::process::Stdio::piped())
+                    .spawn()
+                    .expect("Spawning less failed");
+
+                if let Some(mut stdin) = command.stdin.take() {
+                    stdin
+                        .write_all(text.as_bytes())
+                        .expect("Writing to less failed");
+                }
+
+                command.wait();
+            })
+            .expect("Something went wrong");
+    };
+    match args.len() {
+        0 => {
+            let mut actions = ctx.parser.get_actions();
+            x(actions);
+        }
+        1 => {
+            let mut actions = ctx.parser.get_actions_for_binding(args[0].into());
+            x(actions);
+        }
+        2 => {
+            ctx.parser.add_action(args[0], args[1].into());
+            ctx.app.status = "mapped".into();
+        }
+        _ => {
+            ctx.app.status = "Too many arguments see :help map".into();
+        }
+    }
     Ok(())
 }
 
@@ -153,7 +200,8 @@ pub fn node_center(ctx: &mut Context, _args: &[&str]) -> CommandResult {
 
 pub fn yank(ctx: &mut Context, args: &[&str]) -> CommandResult {
     AssertArgs!(args, 1);
-    let result = ctx.clipboard
+    let result = ctx
+        .clipboard
         .as_mut()
         .ok_or_else(|| "No clipboard provider!".to_owned())?
         .set_contents(args[0].to_owned())
@@ -280,8 +328,6 @@ pub fn search(ctx: &mut Context, _args: &[&str]) -> CommandResult {
             }
         })
         .map_err(|e| format!("Error in call: {e}"))?;
-
-    ctx.term.clear();
 
     Ok(())
 }

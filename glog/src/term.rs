@@ -27,7 +27,9 @@ impl Term {
     {
         self.restore()?;
         func();
-        self.enter()
+        self.enter()?;
+        self.clear();
+        Ok(())
     }
 
     pub fn call_external(&mut self, mut command: std::process::Command) -> Result<(), io::Error> {

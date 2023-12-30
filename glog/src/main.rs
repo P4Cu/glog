@@ -51,29 +51,31 @@ async fn main() -> Result<(), Box<dyn Error>> {
     // TODO: bind via config file
     // TODO: <cr> executes commands, othewise enter pre-filled command mode
     // TODO: allow shorter commands when not conflicting
-    // TODO: allow way to bind new commands
-    let parser = VimKeyParser::default()
-        .add_action("q", "quit")
-        .add_action("<c-c>", "quit")
-        .add_action("k", "up")
-        .add_action("j", "down")
-        .add_action("<c-u>", "pageup")
-        .add_action("<c-d>", "pagedown")
-        .add_action("gg", "top")
-        .add_action("G", "bottom")
-        .add_action("K", "nodeup")
-        .add_action("J", "nodedown")
-        .add_action("L", "exec git show --stat --patch %0")
-        .add_action("yy", "yank %0")
+    // TODO: allow way to bind new commands MAP COMMAND!
+    // TODO: help command!
+    let mut parser = VimKeyParser::default();
+    parser
+        .add_action("q", "quit".to_owned())
+        .add_action("<c-c>", "quit".to_owned())
+        .add_action("k", "up".to_owned())
+        .add_action("j", "down".to_owned())
+        .add_action("<c-u>", "pageup".to_owned())
+        .add_action("<c-d>", "pagedown".to_owned())
+        .add_action("gg", "top".to_owned())
+        .add_action("G", "bottom".to_owned())
+        .add_action("K", "nodeup".to_owned())
+        .add_action("J", "nodedown".to_owned())
+        .add_action("L", "exec git show --stat --patch %0".to_owned())
+        .add_action("yy", "yank %0".to_owned())
         // TODO: something like %0:branch[@] which would return branch name
-        .add_action("zz", "center")
-        .add_action("<space>", "select")
-        .add_action("d", "exec git diff %_1 %0 ")
-        .add_action("D", "exec git difftool --dir-diff %_1 %0")
+        .add_action("zz", "center".to_owned())
+        .add_action("<space>", "select".to_owned())
+        .add_action("d", "exec git diff %_1 %0 ".to_owned())
+        .add_action("D", "exec git difftool --dir-diff %_1 %0".to_owned())
         // .add_action("@", "exec %@") // TODO: this should enter command without triggering it
-        .add_action("/", "search")
-        .add_action(":", "mode command")
-        .add_action("r", "enter_reload");
+        .add_action("/", "search".to_owned())
+        .add_action(":", "mode command".to_owned())
+        .add_action("r", "enter_reload".to_owned());
 
     let mut cmd_reactor = CmdReactor::new();
     cmd_reactor.add_commands(actions::actions());
@@ -181,7 +183,7 @@ fn handle_input_event<'a>(
         input::InputEvent::Event(crossterm::event::Event::Key(e)) => match context.app.mode() {
             app::Mode::Normal => match context.parser.handle_action(e) {
                 ParsedAction::Only(action) => {
-                    execute(cmd_reactor, context, action);
+                    execute(cmd_reactor, context, &action);
                 }
                 ParsedAction::None => {
                     context.app.status = format!("Not handled: {:?}", e);
