@@ -158,22 +158,49 @@ fn parse_key(p: Pair<Rule>) -> KeyCode {
     KeyCode::Char(p.as_str().chars().next().unwrap())
 }
 
-#[derive(Debug)]
 struct InnerMap<T> {
     action: Option<T>,
-    map: Option<HashMap<KeyEvent, InnerMap<T>>>,
+    map: HashMap<KeyEvent, InnerMap<T>>,
 }
 
 impl<T> Default for InnerMap<T> {
     fn default() -> InnerMap<T> {
         InnerMap {
             action: None,
-            map: None,
+            map: HashMap::new(),
         }
     }
 }
 
-impl<T> InnerMap<T> {
+impl<T> Debug for InnerMap<T>
+where
+    T: Debug,
+{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("InnerMap")
+            .field("action", &self.action)
+            .field(
+                "map",
+                &self
+                    .map
+                    .iter()
+                    .map(|(k, v)| (to_vim_key(*k), v))
+                    .collect::<HashMap<_, _>>(),
+            )
+            .finish()
+    }
+}
+
+impl<T> InnerMap<T>
+where
+    T: Debug,
+{
+    fn is_empty(&self) -> bool {
+        let res = self.action.is_none() && self.map.is_empty();
+        log::debug!("RES: {}", res);
+        res
+    }
+
     fn flatten_actions(&self, parent_keys: &str) -> Vec<(String, &T)> {
         let mut actions = Vec::new();
 
@@ -183,14 +210,41 @@ impl<T> InnerMap<T> {
         }
 
         // Recursively process the InnerMap's map if it exists
-        if let Some(ref map) = self.map {
-            for (key, inner_map) in map {
-                let new_parent_keys = format!("{}{}", parent_keys, to_vim_key(*key));
-                actions.extend(inner_map.flatten_actions(&new_parent_keys));
-            }
+        for (key, inner_map) in &self.map {
+            let new_parent_keys = format!("{}{}", parent_keys, to_vim_key(*key));
+            actions.extend(inner_map.flatten_actions(&new_parent_keys));
         }
 
         actions
+    }
+
+    fn remove_action(&mut self, keys: &[KeyEvent]) {
+        log::debug!("X {:?}", self);
+        match keys.len() {
+            0 => {}
+            1 => {
+                let key = &keys[0];
+                if let Some(inner_map) = self.map.get_mut(key) {
+                    // remove action
+                    inner_map.action = None;
+                    // if it's empty we can remove it from outer map
+                    if inner_map.is_empty() {
+                        self.map.remove(key);
+                    }
+                }
+            }
+            _ => {
+                let key = &keys[0];
+                if let Some(inner_map) = self.map.get_mut(key) {
+                    inner_map.remove_action(&keys[1..]);
+                    // cleanup nodes above if they don't point to anything useful now
+                    if inner_map.is_empty() {
+                        // in this case we can remove that node from the map
+                        self.map.remove(key);
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -222,7 +276,7 @@ where
 {
     pub fn add_action(&mut self, binding: &str, action: T) -> &mut Self {
         let most_inner_map = vim_key(binding).iter().fold(&mut self.map, |acc, key| {
-            let map = acc.map.get_or_insert(HashMap::default());
+            let map = &mut acc.map;
             if !map.contains_key(key) {
                 map.insert(*key, InnerMap::default());
             }
@@ -232,17 +286,9 @@ where
         self
     }
 
-    pub fn remove_action(/* mut */ self, _binding: &str) {
-        todo!("Implement remove_action")
-        // let most_inner_map = vim_key(binding).iter().fold(
-        //     &mut self.map, |acc, key| {
-        //         let map = acc.map.get_or_insert(HashMap::default());
-        //         if !map.contains_key(key) {
-        //             // TODO: do nothing
-        //         }
-        //         map.get_mut(key).unwrap()
-        // });
-        // most_inner_map.action = Some(action);
+    pub fn remove_action(&mut self, binding: &str) {
+        let keys = vim_key(binding);
+        self.map.remove_action(&keys);
     }
 
     pub fn handle_action(&mut self, key: KeyEvent) -> ParsedAction<T> {
@@ -251,10 +297,10 @@ where
         let most_inner_map = self
             .multi_key
             .iter()
-            .fold(Some(&self.map), |acc, key| acc?.map.as_ref()?.get(key));
+            .fold(Some(&self.map), |acc, key| acc?.map.get(key));
         if let Some(map) = most_inner_map {
             if let Some(action) = &map.action {
-                if map.map.is_some() {
+                if !map.map.is_empty() {
                     return ParsedAction::Ambiguous(action.clone());
                 } else {
                     self.multi_key.clear();
@@ -282,11 +328,7 @@ where
         assert_eq!(None, self.map.action, "Action for map root (no key bound)");
         let x = vim_key(binding).iter().fold(Some(&self.map), |acc, e| {
             if let Some(acc) = acc {
-                if let Some(ref map) = acc.map {
-                    map.get(e)
-                } else {
-                    None
-                }
+                acc.map.get(e)
             } else {
                 None
             }

@@ -2178,6 +2178,7 @@ name = "vim_key"
 version = "0.1.0"
 dependencies = [
  "crossterm",
+ "log",
  "pest",
  "pest_derive",
 ]

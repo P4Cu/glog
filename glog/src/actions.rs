@@ -34,6 +34,7 @@ pub struct Context<'a> {
 pub fn actions<'a>() -> Vec<(&'static str, FnCommand<Context<'a>>)> {
     vec![
         ("map", map_action),
+        ("unmap", unmap_action),
         ("echo", echo),
         ("quit", quit),
         ("up", up),
@@ -126,6 +127,12 @@ pub fn map_action(ctx: &mut Context, args: &[&str]) -> CommandResult {
             ctx.app.status = "Too many arguments see :help map".into();
         }
     }
+    Ok(())
+}
+
+pub fn unmap_action(ctx: &mut Context, args: &[&str]) -> CommandResult {
+    AssertArgs!(args, 1);
+    ctx.parser.remove_action(args[0]);
     Ok(())
 }
 
