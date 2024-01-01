@@ -33,6 +33,7 @@ pub struct Context<'a> {
 
 pub fn actions<'a>() -> Vec<(&'static str, FnCommand<Context<'a>>)> {
     vec![
+        ("actions", list_actions),
         ("map", map_action),
         ("unmap", unmap_action),
         ("echo", echo),
@@ -80,6 +81,18 @@ impl Context<'_> {
     }
 }
 
+pub fn list_actions(ctx: &mut Context, args: &[&str]) -> CommandResult {
+    let mut actions = actions();
+    actions.sort();
+    let text = actions
+        .into_iter()
+        .map(|(name, _)| name)
+        .collect::<Vec<_>>()
+        .join("\n");
+    ctx.term.text_via_less(text.as_str());
+    Ok(())
+}
+
 pub fn echo(ctx: &mut Context, args: &[&str]) -> CommandResult {
     ctx.app.status = args.join(" ").to_owned();
     Ok(())
@@ -93,22 +106,7 @@ pub fn map_action(ctx: &mut Context, args: &[&str]) -> CommandResult {
             .map(|(keybind, action)| format!("{:10} {}", keybind, action))
             .collect::<Vec<_>>()
             .join("\n");
-        ctx.term
-            .call(|| {
-                let mut command = std::process::Command::new("less") // TODO: user PAGER or 'less'
-                    .stdin(std::process::Stdio::piped())
-                    .spawn()
-                    .expect("Spawning less failed");
-
-                if let Some(mut stdin) = command.stdin.take() {
-                    stdin
-                        .write_all(text.as_bytes())
-                        .expect("Writing to less failed");
-                }
-
-                command.wait();
-            })
-            .expect("Something went wrong");
+        ctx.term.text_via_less(text.as_str());
     };
     match args.len() {
         0 => {

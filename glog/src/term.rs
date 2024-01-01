@@ -1,4 +1,5 @@
-use std::io;
+use std::io::Write;
+use std::{env, io};
 
 use crossterm::{
     execute,
@@ -81,6 +82,25 @@ impl Term {
         self.restore()?;
         println!("{}", text);
         self.enter()
+    }
+
+    pub fn text_via_less(&mut self, text: &str) {
+        self.call(|| {
+            let pager = env::var("PAGER").unwrap_or("less".into());
+            let mut command = std::process::Command::new(pager)
+                .stdin(std::process::Stdio::piped())
+                .spawn()
+                .expect("Spawning less failed");
+
+            if let Some(mut stdin) = command.stdin.take() {
+                stdin
+                    .write_all(text.as_bytes())
+                    .expect("Writing to less failed");
+            }
+
+            command.wait();
+        })
+        .expect("Something went wrong");
     }
 }
 
