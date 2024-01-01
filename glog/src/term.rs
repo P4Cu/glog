@@ -1,3 +1,4 @@
+use crate::utils::*;
 use std::io::Write;
 use std::{env, io};
 
@@ -98,9 +99,12 @@ impl Term {
                     .expect("Writing to less failed");
             }
 
-            command.wait();
+            command
+                .wait()
+                .map(|_| ())
+                .warn_on_err("Waiting for 'less' to finish failed.");
         })
-        .expect("Something went wrong");
+        .warn_on_err("Calling 'less' failed.");
     }
 }
 

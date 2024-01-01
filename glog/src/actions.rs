@@ -1,4 +1,4 @@
-use std::io::Write;
+
 
 use copypasta::{x11_clipboard::X11ClipboardContext, ClipboardProvider};
 use log::debug;
@@ -81,7 +81,7 @@ impl Context<'_> {
     }
 }
 
-pub fn list_actions(ctx: &mut Context, args: &[&str]) -> CommandResult {
+pub fn list_actions(ctx: &mut Context, _args: &[&str]) -> CommandResult {
     let mut actions = actions();
     actions.sort();
     let text = actions
@@ -110,11 +110,11 @@ pub fn map_action(ctx: &mut Context, args: &[&str]) -> CommandResult {
     };
     match args.len() {
         0 => {
-            let mut actions = ctx.parser.get_actions();
+            let actions = ctx.parser.get_actions();
             x(actions);
         }
         1 => {
-            let mut actions = ctx.parser.get_actions_for_binding(args[0].into());
+            let actions = ctx.parser.get_actions_for_binding(args[0]);
             x(actions);
         }
         2 => {

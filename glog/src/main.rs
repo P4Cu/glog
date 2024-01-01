@@ -179,6 +179,7 @@ fn handle_input_event<'a>(
     context: &mut actions::Context<'a>,
     cmd_reactor: &mut CmdReactor<actions::Context<'a>>,
 ) {
+    #[allow(clippy::single_match)] // TODO: future use
     match event {
         input::InputEvent::Event(crossterm::event::Event::Key(e)) => match context.app.mode() {
             app::Mode::Normal => match context.parser.handle_action(e) {

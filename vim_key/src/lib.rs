@@ -297,7 +297,7 @@ where
         let most_inner_map = self
             .multi_key
             .iter()
-            .fold(Some(&self.map), |acc, key| acc?.map.get(key));
+            .try_fold(&self.map, |acc, key| acc.map.get(key));
         if let Some(map) = most_inner_map {
             if let Some(action) = &map.action {
                 if !map.map.is_empty() {
@@ -321,20 +321,16 @@ where
 
     pub fn get_actions(&self) -> Vec<(String, &T)> {
         assert_eq!(None, self.map.action, "Action for map root (no key bound)");
-        self.map.flatten_actions("".into())
+        self.map.flatten_actions("")
     }
 
     pub fn get_actions_for_binding(&self, binding: &str) -> Vec<(String, &T)> {
         assert_eq!(None, self.map.action, "Action for map root (no key bound)");
-        let x = vim_key(binding).iter().fold(Some(&self.map), |acc, e| {
-            if let Some(acc) = acc {
-                acc.map.get(e)
-            } else {
-                None
-            }
-        });
+        let x = vim_key(binding)
+            .iter()
+            .try_fold(&self.map, |acc, e| acc.map.get(e));
         if let Some(x) = x {
-            x.flatten_actions(binding.into())
+            x.flatten_actions(binding)
         } else {
             Vec::new()
         }
