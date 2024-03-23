@@ -1,16 +1,16 @@
-use crate::{app::{self, App, Entry}};
-use tui::{
-    backend::Backend,
+use crate::app::{self, App, Entry};
+use ratatui::{
     layout::{Constraint, Direction, Layout},
     style::{Color, Modifier, Style},
-    text::{Span, Spans},
+    text::Line,
+    text::Span,
     widgets::{Block, BorderType, Borders, List, ListItem, ListState},
     Frame,
 };
 
 // TODO: allow to scroll left/right on very long lines
 
-fn log_line<'a>(entry: &'a Entry, app: &app::App) -> Spans<'a> {
+fn log_line<'a>(entry: &'a Entry, app: &app::App) -> Line<'a> {
     // TODO: style as struct
     let hash_style = Style::default().fg(Color::Yellow);
     let heads_style = Style::default().fg(Color::Green);
@@ -61,10 +61,10 @@ fn log_line<'a>(entry: &'a Entry, app: &app::App) -> Spans<'a> {
     spans.push(Span::styled(&entry.git.subject, subject_style));
     spans.push(Span::raw(" "));
     spans.push(Span::styled(entry.git.author_and_date(), author_date_style));
-    Spans::from(spans)
+    spans.into()
 }
 
-fn draw_list<B: Backend>(f: &mut Frame<B>, app: &mut App, chunk: tui::layout::Rect) {
+fn draw_list(f: &mut Frame, app: &mut App, chunk: ratatui::layout::Rect) {
     let height = chunk.height.saturating_sub(1); // top border
 
     app.log.set_view_height(height);
@@ -82,8 +82,8 @@ fn draw_list<B: Backend>(f: &mut Frame<B>, app: &mut App, chunk: tui::layout::Re
         )
         .highlight_style(
             Style::default()
-                .fg(tui::style::Color::Black)
-                .bg(tui::style::Color::Green)
+                .fg(ratatui::style::Color::Black)
+                .bg(ratatui::style::Color::Green)
                 .add_modifier(Modifier::BOLD),
         );
 
@@ -92,7 +92,7 @@ fn draw_list<B: Backend>(f: &mut Frame<B>, app: &mut App, chunk: tui::layout::Re
     f.render_stateful_widget(list, chunk, &mut state);
 }
 
-pub fn draw<B: Backend>(f: &mut Frame<B>, app: &mut App) {
+pub fn draw(f: &mut Frame, app: &mut App) {
     let chunks = Layout::default()
         .direction(Direction::Vertical)
         .constraints(
@@ -108,12 +108,12 @@ pub fn draw<B: Backend>(f: &mut Frame<B>, app: &mut App) {
     draw_list(f, app, chunks[0]);
 
     let status_style = Style::default().add_modifier(Modifier::REVERSED);
-    let status_block = tui::widgets::Paragraph::new("status").style(status_style);
+    let status_block = ratatui::widgets::Paragraph::new("status").style(status_style);
     f.render_widget(status_block, chunks[1]);
 
     match app.mode() {
         app::Mode::Normal => {
-            let block = tui::widgets::Paragraph::new(app.status.as_str());
+            let block = ratatui::widgets::Paragraph::new(app.status.as_str());
             f.render_widget(block, chunks[2]);
         }
         app::Mode::Command(_cmd) => {

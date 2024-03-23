@@ -1,24 +1,27 @@
 use std::{path::PathBuf, sync::Arc, time::Duration};
 
 use log::info;
+use ratatui::style::Style;
 use stopwatch::Stopwatch;
 use tokio::{pin, select, sync::mpsc, task::JoinHandle};
 use tokio_stream::StreamExt;
-use tui::style::Style;
 use tui_textarea::TextArea;
 
-use crate::{stateful_list::{StatefulList, Selectable}, utils::WarnOnErr};
+use crate::{
+    stateful_list::{Selectable, StatefulList},
+    utils::WarnOnErr,
+};
 
 // TODO: confirm most of actions so user knows something happened. Like 'yy'
 
 #[derive(Clone)]
 pub struct Entry {
     pub git: git::LogEntry,
-    selected: bool
+    selected: bool,
 }
 
 impl Entry {
-    pub fn new(git: git::LogEntry) -> Self{
+    pub fn new(git: git::LogEntry) -> Self {
         Self {
             git,
             selected: false,
