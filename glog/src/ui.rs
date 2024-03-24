@@ -1,4 +1,5 @@
 use crate::app::{self, App, Entry};
+use ansi_to_tui::IntoText;
 use ratatui::{
     layout::{Constraint, Direction, Layout},
     style::{Color, Modifier, Style},
@@ -27,7 +28,17 @@ fn log_line<'a>(entry: &'a Entry, app: &app::App) -> Line<'a> {
     } else if app.log.has_selected() {
         spans.push(Span::raw("  "));
     }
-    spans.push(Span::raw(entry.git.graph.clone()));
+
+    // transform graph
+    let x = entry
+        .git
+        .graph
+        .to_text()
+        .expect("Couldn't transform graph into text");
+    assert_eq!(x.lines.len(), 1);
+    let lines = &x.lines[0];
+    spans.extend(lines.spans.clone());
+
     spans.push(Span::styled(
         entry.git.hash.chars().take(8).collect::<String>(),
         hash_style,

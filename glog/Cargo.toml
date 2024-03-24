@@ -20,6 +20,7 @@ ratatui = { version = "0.26", features = [
   "crossterm",
 ], default-features = false }
 tui-textarea = { version = "0.4", features = ["crossterm"] }
+ansi-to-tui = "4.0"
 tokio = { version = "1", features = ["full"] }
 tokio-stream = "0.1"
 async-stream = "0.3"

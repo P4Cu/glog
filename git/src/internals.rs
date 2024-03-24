@@ -11,7 +11,8 @@ use crate::{LogEntry, RefNames};
 
 pub fn log_entry_from_split(split: &mut Split<&str>) -> LogEntry {
     LogEntry {
-        graph: String::from(split.next().unwrap()),
+        // TODO: remove color reset workaround once https://github.com/uttarayan21/ansi-to-tui/issues/40 is fixed
+        graph: String::from(split.next().unwrap()).replace("[m", "[0m"),
         hash: String::from(split.next().unwrap_or("")),
         subject: String::from(split.next().unwrap_or("")),
         author: String::from(split.next().unwrap_or("")),
@@ -32,6 +33,7 @@ pub async fn get_log<'a>(
         .args([
             "log",
             "--graph",
+            "--color=always",
             "--oneline",
             "--decorate=full", // full decoration needed for refs/tags, refs/remotes etc.
         ])
